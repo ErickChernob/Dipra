@@ -1,0 +1,36 @@
+# Dipra Soluciones Integrales - Apache configuration
+# See MIGRATION_NOTES.md for the full rationale behind these rules.
+
+# Prevent directory listings on any folder that has no index file.
+Options -Indexes
+
+# Custom error page instead of the host's generic 404.
+ErrorDocument 404 /404.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # 1. Force HTTPS.
+  RewriteCond %{HTTPS} off
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # 2. Canonical host: www.dipra-soluciones.com (non-www redirects to www).
+  #    If this site is ever moved to a different domain, update the two
+  #    lines below to match.
+  RewriteCond %{HTTP_HOST} ^dipra-soluciones\.com$ [NC]
+  RewriteRule ^ https://www.dipra-soluciones.com%{REQUEST_URI} [L,R=301]
+
+  # 3. Optional clean URLs: allow /servicios as an alternative to
+  #    /servicios.html without changing any of the site's existing links
+  #    (which keep their .html extension in every internal href).
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME}\.html -f
+  RewriteRule ^([^.]+)$ $1.html [L]
+
+  # 4. Legacy Webflow paths: this export's pages already use the same
+  #    filenames the live Webflow site used, so there are no known old
+  #    Webflow-only URLs to redirect from. If the previous Webflow site
+  #    published different slugs, add 301s here, for example:
+  #    RewriteRule ^old-slug/?$ /new-slug.html [L,R=301]
+</IfModule>

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /detail_projects.html
+
+Sitemap: https://www.dipra-soluciones.com/sitemap.xml
