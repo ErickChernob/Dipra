@@ -278,3 +278,17 @@ already being touched for Webflow-attribute removal:
 
 Purely cosmetic/structural issues flagged in the audit but **not** touched
 in this pass (to avoid visual risk) are listed in §6, item 5 above.
+
+---
+
+**Update (production-readiness QA passes):** two subsequent QA/hardening
+passes were performed on this build before packaging it for deployment —
+see `../FINAL_QA_REPORT.md` for the full detail, including a dedicated
+`w-node-*`/`data-w-id` interaction audit (conclusion: all 205 `w-node-*`
+occurrences are required CSS Grid layout anchors, 0 removed; 0
+`data-w-id`s remain, already removed above) and a stricter sweep for
+Webflow-owned CDN domains (conclusion: the one `d3e54v103j8qbb.cloudfront.net`
+reference documented above is the only one that remains — repeated
+download attempts in the build environment were consistently blocked by
+network policy across every Webflow-owned domain tested, not just this
+one host).

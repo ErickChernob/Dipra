@@ -1,10 +1,12 @@
 # Final QA Report — Dipra Soluciones Integrales (production-readiness pass)
 
-This report covers the QA/hardening pass performed on top of the
-independent static build (`independent-static-site/`, produced in the prior
-migration phase) before packaging it as `public_html_ready/` /
-`public_html_ready.zip`. For the original migration's own findings, see
-`independent-static-site/MIGRATION_NOTES.md`.
+This report covers two consecutive QA/hardening passes performed on top of
+the independent static build (`independent-static-site/`, produced in the
+original migration phase) before packaging it as `public_html_ready/` /
+`public_html_ready.zip`. The second pass added a dedicated `w-node-*`/
+`data-w-id` interaction audit and a stricter Webflow-owned-CDN sweep on top
+of everything the first pass already covered. For the original migration's
+own findings, see `independent-static-site/MIGRATION_NOTES.md`.
 
 ---
 
@@ -81,8 +83,9 @@ combination.
 | `.htaccess` did a two-hop redirect for an `http://` + non-www request (HTTP→HTTPS, then HTTPS non-www→www) | Combined into a single-hop redirect using an `[OR]` condition |
 | No browser caching, compression, or security headers in `.htaccess` | Added `mod_expires` cache lifetimes, `mod_deflate` compression for text assets, and safe `mod_headers` (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) — none of these restrict any third-party resource the site actually uses |
 | No file compression pass had been done | Re-encoded all 129 JPEG/PNG images losslessly/near-losslessly (JPEG quality 87 + optimize + progressive; PNG optimize) — verified every file still opens/decodes correctly and re-screenshotted a heavy-image page (`servicios.html`) to confirm no visible quality loss. Total: 32.47 MB → 24.36 MB (−8.11 MB) |
+| No `og:url` or `og:site_name` tags existed on any page | Added both to all 6 real pages, reusing each page's own existing `<link rel="canonical">` value for `og:url` and the existing brand name ("Dipra Soluciones Integrales", already used in every `<title>`) for `og:site_name` — a technical completion, not new marketing copy |
 
-No actually-broken links, missing files, JavaScript console errors, unexpected 404 asset requests, mixed-content warnings, or case-sensitivity mismatches were found anywhere in the project.
+No actually-broken links, missing files, JavaScript console errors, unexpected 404 asset requests, mixed-content warnings, or case-sensitivity mismatches were found anywhere in the project. There is no back-to-top button, WhatsApp link, tel: link, dropdown, tab, or accordion anywhere in the project to test — none of these components exist on this site (confirmed by full-text search), so their absence from the tables above is not an oversight.
 
 ## Webflow dependency verification
 
@@ -107,6 +110,100 @@ migration phase; this pass additionally removed the last pieces of dead
 Webflow-component CSS. The site does not load any script from
 `webflow.com`, `*.webflow.io`, `website-files.com`, or Webflow's asset CDN,
 and does not require Webflow hosting to function.
+
+## `w-node-*` and `data-w-id` interaction-attribute audit
+
+A dedicated sweep, separate from the class-name check above, since these
+IDs are Webflow's per-element identifiers rather than component classes:
+
+- **`data-w-id` (IX2 interaction identifiers): 0 remaining, project-wide.**
+  These were removed in the original migration phase after confirming (by
+  inspecting both `js/webflow.js`'s bundled code and every HTML file) that
+  no IX2 interactions payload/config exists anywhere in this export — the
+  handful of `data-w-id`s originally on `index.html` and
+  `detail_projects.html` never drove any working scroll/hover/load
+  animation in the first place, so nothing was lost by removing them. No
+  new ones were introduced. There is nothing to leave in place here.
+- **`id="w-node-*"` (Webflow Designer's per-element grid/flex IDs): 205
+  occurrences across the 7 HTML pages, 118 unique IDs** (the shared
+  navbar/footer markup repeats the same IDs on every page). Every one of
+  these was individually cross-referenced against both stylesheets:
+  - **118 of 118 unique IDs have a matching `#w-node-...` CSS rule** in
+    `css/dipra.webflow.css` (verified with a set comparison, not a
+    sample — the list of unique HTML IDs and the list of unique CSS
+    `#w-node-` selectors are identical, zero IDs on either side without a
+    match on the other).
+  - Those CSS rules assign each element's position within Webflow's CSS
+    Grid layout (`grid-area`-equivalent placement, alignment overrides).
+    **All 205 occurrences are load-bearing for the current grid layout —
+    required for interaction/layout, none are dead** — removing or
+    renaming any of them would silently shift that element out of its
+    intended grid cell.
+  - None of them are read by `js/main.js` or any other script (confirmed
+    by grep) — they are pure CSS layout anchors, not JS interaction
+    hooks, so there was never a scroll/hover/animation "interaction" tied
+    to any of them beyond the (already-removed) dead `data-w-id`s above.
+  - **Disposition: 0 removed.** Every `w-node-*` ID found is required and
+    was left in place; none were renamed or stripped.
+
+## Webflow-hosted CDN asset delinking (domain-layer sweep)
+
+A full-project, case-insensitive search across every `.html`, `.css`, and
+`.js` file — including every `<meta>` tag, every CSS `url()`, and every
+`<img>`/`<video>`/`<source>`/`srcset` attribute — for absolute URLs
+containing `website-files.com`, `webflow.io`, `uploads-ssl.webflow.com`,
+`assets-global.website-files.com`, or `cdn.prod.website-files.com`:
+
+- **Zero matches** for any of those five patterns anywhere in the project.
+- **Open Graph / Twitter images**: `og:image` and `twitter:image` on all 6
+  real pages already point at `https://www.dipra-soluciones.com/images/Dipra_OGraph.png`
+  — the site's own domain, a local file, not Webflow's. (This was
+  localized in the original migration phase; re-confirmed here.)
+- **`og:url` / `og:site_name`**: didn't exist before this pass; added using
+  each page's own canonical URL and the site's own brand name (see the
+  issues table above) — never pointed at Webflow to begin with.
+- **Favicon / apple-touch-icon**: both `<link>` tags on every page point at
+  local files (`images/favicon.png`, `images/webclip.png`) — confirmed by
+  inspecting the literal `href` values, not just the `rel` attributes.
+- **One remaining match outside the five listed patterns**: the hero-video
+  and Open Graph image were already fixed in the original migration phase,
+  but `css/dipra.webflow.css` still has two `background-image: url(...)`
+  rules pointing at `https://d3e54v103j8qbb.cloudfront.net/img/background-image.svg`.
+  This is a **different, older Webflow-owned CDN hostname** (Webflow's
+  legacy CloudFront distribution, also used elsewhere in this project's
+  history for jQuery hosting) than the five patterns this step asked to
+  search for — it does not literally match any of them, which is why the
+  sweep above reports zero matches for those specific patterns, but it is
+  still genuinely Webflow-owned infrastructure and is called out
+  separately so it isn't missed.
+  - **This session retried downloading it.** The attempt was blocked by
+    this build environment's network egress policy — confirmed not to be
+    a one-off failure by testing connectivity to all five domains listed
+    in this step plus this CloudFront host: **all six returned the same
+    `403`/`CONNECT tunnel failed` policy rejection**, indicating an
+    environment-level block on Webflow's entire domain family rather than
+    a transient issue with one host. Per this environment's own guidance
+    ("do not retry or route around a policy denial — report the blocked
+    host"), the fetch was not repeated further or worked around.
+  - The two affected rules are marked with `TODO` comments in
+    `css/dipra.webflow.css` (lines ~738 and ~1927) with the exact
+    replacement needed. This is a two-line fix for anyone with normal
+    (unrestricted) internet access: download the SVG, save it as
+    `images/background-image.svg`, and change both `url(...)` values to
+    `url('../images/background-image.svg')`.
+  - Visually, this is a subtle decorative background pattern behind the
+    "Soluciones enfocadas a tus necesidades" ticker on `index.html` and
+    behind the hero of the unlinked `detail_projects.html` — low visual
+    impact, but it is the one asset in this project that still depends on
+    Webflow's infrastructure being reachable.
+
+**Full list of what was found and localized in this domain sweep: nothing
+new** — every asset this step asked to check (OG image, Twitter image,
+favicon, apple-touch-icon, `og:url`, `og:site_name`) was already local or
+has now been added as local/self-referencing. The single item that
+remains external is the CloudFront SVG described above, which falls
+outside the five literal patterns this step named but is flagged anyway
+because it's still genuinely Webflow-owned.
 
 ## Remaining external services
 
@@ -174,8 +271,18 @@ Confirmed. The project does not load `webflow.js`, jQuery from Webflow's
 CDN, or any `Webflow.push`/`Webflow.require` initialization call. All
 interactive behavior (mobile nav, testimonial slider, contact-form guard)
 runs from a single hand-written `js/main.js` with no external library
-dependency. The only remaining reference to Webflow's infrastructure is
-the one documented CDN image noted above — everything else that still
-carries a `w-*`/`webflow` name in this codebase is inert class-name/
-filename legacy, not a functional dependency, per the classification table
-above.
+dependency. Every `w-node-*` ID and every `w-nav`/`w-slider`-family class
+that remains is a pure CSS/layout anchor with zero JS runtime tie to
+Webflow (see the dedicated audit above) — nothing in this project requires
+Webflow's JavaScript to render or function correctly.
+
+**Confirmation: Webflow-hosted CDN assets.** Every asset this pass was
+asked to check — Open Graph image, Twitter card image, favicon,
+apple-touch-icon, hero video/poster — is local to this project or points
+at the site's own domain. The **one exception** is the decorative
+background SVG still served from Webflow's legacy CloudFront CDN
+(`d3e54v103j8qbb.cloudfront.net`), which could not be localized in this
+build environment for the network-policy reasons detailed above. This is
+the single remaining piece of Webflow-owned infrastructure this project
+depends on, and it is clearly flagged with `TODO` comments and an exact
+two-line fix in `css/dipra.webflow.css`.
