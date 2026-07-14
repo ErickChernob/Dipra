@@ -1,0 +1,29 @@
+/* Self-hosted replacement for the Google Fonts (Montserrat, Orbitron) that
+   this site previously loaded at runtime from fonts.googleapis.com /
+   fonts.gstatic.com via the Webflow "WebFont.load" loader.
+   Variable-font files, so one file per style covers every weight
+   (100-900) the original WebFont.load() call requested. */
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/Montserrat-VariableFont.woff2') format('woff2-variations'), url('../fonts/Montserrat-VariableFont.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/Montserrat-Italic-VariableFont.woff2') format('woff2-variations'), url('../fonts/Montserrat-Italic-VariableFont.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Orbitron';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('../fonts/Orbitron-VariableFont.woff2') format('woff2-variations'), url('../fonts/Orbitron-VariableFont.woff2') format('woff2');
+}
