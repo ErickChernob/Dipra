@@ -1,12 +1,20 @@
 # Final QA Report — Dipra Soluciones Integrales (production-readiness pass)
 
-This report covers two consecutive QA/hardening passes performed on top of
-the independent static build (`independent-static-site/`, produced in the
-original migration phase) before packaging it as `public_html_ready/` /
+This report covers three consecutive QA/hardening passes performed on top
+of the independent static build (`independent-static-site/`, produced in
+the original migration phase) before packaging it as `public_html_ready/` /
 `public_html_ready.zip`. The second pass added a dedicated `w-node-*`/
-`data-w-id` interaction audit and a stricter Webflow-owned-CDN sweep on top
-of everything the first pass already covered. For the original migration's
-own findings, see `independent-static-site/MIGRATION_NOTES.md`.
+`data-w-id` interaction audit and a stricter Webflow-owned-CDN sweep. The
+third pass found and corrected an error in both earlier passes: Webflow's
+IX2 interactions payload does exist in this project (embedded as a JS
+object literal inside `js/webflow.js`, not the inline JSON `<script>` tag
+the earlier searches looked for) and several real scroll/hover animations
+had been lost during decoupling as a result. See
+`independent-static-site/ANIMATIONS_NOTES.md` for the full breakdown of
+every interaction found, which were restored (with GSAP + ScrollTrigger,
+vendored locally) and which were deliberately left out and why. For the
+original migration's own findings, see
+`independent-static-site/MIGRATION_NOTES.md`.
 
 ---
 
@@ -269,12 +277,15 @@ because it's still genuinely Webflow-owned.
 
 Confirmed. The project does not load `webflow.js`, jQuery from Webflow's
 CDN, or any `Webflow.push`/`Webflow.require` initialization call. All
-interactive behavior (mobile nav, testimonial slider, contact-form guard)
-runs from a single hand-written `js/main.js` with no external library
-dependency. Every `w-node-*` ID and every `w-nav`/`w-slider`-family class
-that remains is a pure CSS/layout anchor with zero JS runtime tie to
-Webflow (see the dedicated audit above) — nothing in this project requires
-Webflow's JavaScript to render or function correctly.
+interactive behavior (mobile nav, testimonial slider, contact-form guard,
+plus the scroll/hover animations restored in the third pass — see
+`ANIMATIONS_NOTES.md`) runs from hand-written `js/main.js` and
+`js/animations.js`, plus a locally-vendored copy of GSAP + ScrollTrigger
+(`js/vendor/`, not loaded from any CDN). Every `w-node-*` ID and every
+`w-nav`/`w-slider`-family class that remains is a pure CSS/layout anchor
+with zero JS runtime tie to Webflow (see the dedicated audit above) —
+nothing in this project requires Webflow's JavaScript to render or
+function correctly.
 
 **Confirmation: Webflow-hosted CDN assets.** Every asset this pass was
 asked to check — Open Graph image, Twitter card image, favicon,

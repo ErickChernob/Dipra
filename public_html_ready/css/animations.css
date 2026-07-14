@@ -1,0 +1,84 @@
+/* Restored Webflow IX2 interactions that were lost during decoupling.
+   See ANIMATIONS_NOTES.md for the full mapping back to the original
+   IX2 JSON (event id, action list, easing/timing).
+
+   This file holds the animations that are pure CSS (infinite loops,
+   simple hover states) since GSAP isn't needed for them. Scroll-linked
+   and mouse-follow animations live in js/animations.js (GSAP + ScrollTrigger).
+
+   None of these rules change any element's resting appearance: every
+   animation's 0%/from-state matches the value already in
+   css/dipra.webflow.css (verified per-property below), so a page with
+   JS disabled, or before the animation starts, looks identical to
+   before this pass. */
+
+/* ---- IX2 "Looping logos" (action list "a") ----------------------------
+   PAGE_START, loop:true. Original: .lopping-logos.left moves x:0%->-100%
+   over 22000ms then instantly resets to 0% (Webflow's loop pattern -
+   this is exactly what a CSS animation's 100%->0% keyframe wrap already
+   does, so no JS is needed to reproduce it faithfully). Partner-logo
+   marquee on index.html / servicios.html. */
+@keyframes ix2-marquee-left {
+  from { transform: translateX(0%); }
+  to { transform: translateX(-100%); }
+}
+.lopping-logos.left {
+  animation: ix2-marquee-left 22s linear infinite;
+}
+
+/* ---- IX2 "Looping triangle" (action list "a-6") -----------------------
+   PAGE_START, loop:true. .trangle-grid.left/.right drift outward by
+   ∓100% over 20000ms then reset. Decorative background pattern behind
+   the hero video sections. */
+@keyframes ix2-triangle-left {
+  from { transform: translateX(0%); }
+  to { transform: translateX(-100%); }
+}
+@keyframes ix2-triangle-right {
+  from { transform: translateX(0%); }
+  to { transform: translateX(100%); }
+}
+.trangle-grid.left {
+  animation: ix2-triangle-left 20s linear infinite;
+}
+.trangle-grid.right {
+  animation: ix2-triangle-right 20s linear infinite;
+}
+
+/* ---- IX2 "Looping scroll link" (action list "a-2") --------------------
+   PAGE_START, loop:true. .scroll-link-outline spins a full turn over
+   45000ms. Only present on detail_projects.html today. */
+@keyframes ix2-spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.scroll-link-outline {
+  animation: ix2-spin-slow 45s linear infinite;
+}
+
+/* ---- IX2 "Nav link left/right on hover" (action lists a-29/a-30/a-31/a-32)
+   MOUSE_OVER/MOUSE_OUT on .nav-link.left / .nav-link.right, animating
+   their SIBLING .nav-link-line (not a child, so this needs the small
+   class-toggle in js/main.js rather than a pure :hover rule - the
+   right-hand link's hover has to move a line that comes *before* it in
+   the DOM, which plain CSS combinators can't reach).
+   Original easing: outQuad (~cubic-bezier(0.25,0.46,0.45,0.94)),
+   500ms in / 400ms out. Resting appearance (solid line, full width) is
+   unchanged - see ANIMATIONS_NOTES.md for why the hover-out color fade
+   in the original JSON was intentionally not carried over. */
+.nav-link-line {
+  /* Hover-out duration (400ms) is the CSS default; js/main.js swaps in
+     the hover-in duration (500ms) for the moment the hover class is
+     added, then lets it fall back to this rule on hover-out - matching
+     the original's asymmetric 500ms-in / 400ms-out timing exactly. */
+  transition: transform .4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              width .4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.nav-link-line.ix2-hover-left {
+  transform: translateX(-20px);
+  width: 50%;
+}
+.nav-link-line.ix2-hover-right {
+  transform: translateX(20px);
+  width: 50%;
+}

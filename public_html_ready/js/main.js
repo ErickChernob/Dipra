@@ -196,9 +196,43 @@
     });
   }
 
+  /* ---- Restored IX2 "Nav link left/right on hover" (a-29/a-30/a-31/a-32) -
+     .nav-link.left and .nav-link.right each have a sibling .nav-link-line
+     between them; hovering either slides that shared line toward it and
+     shrinks it to 50% width. Plain CSS can't reach a *preceding* sibling,
+     so this small class toggle does the targeting - the actual animation
+     is entirely CSS (see css/animations.css). */
+  function initNavLinkHover() {
+    document.querySelectorAll('.nav-menu-items').forEach(function (group) {
+      var left = group.querySelector('.nav-link.left');
+      var right = group.querySelector('.nav-link.right');
+      var line = group.querySelector('.nav-link-line');
+      if (!line) return;
+
+      function hoverIn(cls) {
+        line.style.transitionDuration = '.5s';
+        line.classList.add(cls);
+      }
+      function hoverOut(cls) {
+        line.style.transitionDuration = '';
+        line.classList.remove(cls);
+      }
+
+      if (left) {
+        left.addEventListener('mouseenter', function () { hoverIn('ix2-hover-left'); });
+        left.addEventListener('mouseleave', function () { hoverOut('ix2-hover-left'); });
+      }
+      if (right) {
+        right.addEventListener('mouseenter', function () { hoverIn('ix2-hover-right'); });
+        right.addEventListener('mouseleave', function () { hoverOut('ix2-hover-right'); });
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initNavbars();
     initForms();
     initSliders();
+    initNavLinkHover();
   });
 })();
